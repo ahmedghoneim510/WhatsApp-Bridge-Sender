@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Bridge Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      .qr-container {
+        max-width: 300px;
+        margin: 0 auto;
+      }
+      .status-connected {
+        background-color: #10b981;
+      }
+      .status-connecting {
+        background-color: #f59e0b;
+      }
+      .status-closed {
+        background-color: #ef4444;
+      }
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+      <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">
+          لوحة تحكم WhatsApp Bridge
+        </h1>
+        <p class="text-gray-600">إدارة الجلسات وإرسال الرسائل</p>
+      </header>
+
+      <!-- Sessions List -->
+      <div
+        id="sessions-container"
+        class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+      >
+        <!-- Sessions will be loaded here -->
+      </div>
+
+      <!-- Create New Session Modal -->
+      <div
+        id="create-session-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"
+      >
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-semibold mb-4">إنشاء جلسة جديدة</h3>
+            <form id="create-session-form">
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >معرف الجلسة</label
+                >
+                <input
+                  type="text"
+                  id="new-session-id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="مثال: main, sales, support"
+                  required
+                />
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >عنوان URL للـ Webhook <span class="text-gray-400 text-xs">(اختياري)</span></label
+                >
+                <input
+                  type="text"
+                  id="webhook-url"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://your-app.com/webhooks/whatsapp (اختياري للاختبار)"
+                />
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >سر الـ Webhook (اختياري)</label
+                >
+                <input
+                  type="password"
+                  id="webhook-secret"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="secret-key"
+                />
+              </div>
+              <div class="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onclick="closeModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                >
+                  إنشاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Send Message Modal -->
+      <div
+        id="send-message-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"
+      >
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-semibold mb-4">إرسال رسالة</h3>
+            <form id="send-message-form">
+              <input type="hidden" id="send-session-id" />
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >رقم الهاتف</label
+                >
+                <input
+                  type="text"
+                  id="recipient-phone"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="201234567890"
+                  required
+                />
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >الرسالة</label
+                >
+                <textarea
+                  id="message-text"
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="اكتب رسالتك هنا..."
+                  required
+                ></textarea>
+              </div>
+              <div class="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onclick="closeSendModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                >
+                  إرسال
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Send Modal -->
+      <div
+        id="bulk-send-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"
+      >
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">إرسال رسائل جماعية</h3>
+            <form id="bulk-send-form">
+              <input type="hidden" id="bulk-session-id" />
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >الأرقام (واحد في كل سطر)</label
+                >
+                <textarea
+                  id="bulk-recipients"
+                  rows="8"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="01012345678&#10;01098765432&#10;201234567890&#10;..."
+                  required
+                ></textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                  يمكنك إدخال الأرقام بصيغ مختلفة (01012345678 أو 201234567890)
+                </p>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >الرسالة</label
+                >
+                <textarea
+                  id="bulk-message-text"
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="اكتب رسالتك هنا..."
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >التأخير بين الرسائل (ملي ثانية)</label
+                >
+                <input
+                  type="number"
+                  id="bulk-delay"
+                  value="1000"
+                  min="500"
+                  max="10000"
+                  step="500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  الحد الأدنى: 500ms (لتفادي حظر WhatsApp)
+                </p>
+              </div>
+              <div class="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onclick="closeBulkModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  id="bulk-send-btn"
+                  class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  إرسال
+                </button>
+              </div>
+            </form>
+            <!-- Results Display -->
+            <div id="bulk-results" class="mt-4 hidden">
+              <h4 class="font-semibold mb-2">نتائج الإرسال:</h4>
+              <div id="bulk-results-content" class="text-sm space-y-1 max-h-60 overflow-y-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Session Button -->
+      <div class="text-center mt-8">
+        <button
+          onclick="showCreateModal()"
+          class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition duration-200"
+        >
+          <i data-lucide="plus" class="inline w-5 h-5 mr-2"></i>
+          إنشاء جلسة جديدة
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let refreshInterval;
+
+      // Initialize Lucide icons
+      lucide.createIcons();
+
+      // Load sessions on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        loadSessions();
+        refreshInterval = setInterval(loadSessions, 10000); // Refresh every 10 seconds (تقليل الطلبات)
+      });
+
+      async function loadSessions() {
+        try {
+          const response = await fetch("/sessions", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Failed to load sessions:", response.status, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+
+          const data = await response.json();
+
+          const container = document.getElementById("sessions-container");
+          if (!container) {
+            console.error("Sessions container not found");
+            return;
+          }
+
+          container.innerHTML = "";
+
+          // التحقق من وجود sessions في البيانات
+          if (!data || !Array.isArray(data.sessions)) {
+            console.error("Invalid sessions data:", data);
+            container.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i data-lucide="alert-circle" class="w-16 h-16 text-red-300 mx-auto mb-4"></i>
+                            <p class="text-red-500 text-lg">خطأ في تحميل البيانات</p>
+                            <p class="text-gray-400 text-sm">البيانات المستلمة غير صحيحة</p>
+                        </div>
+                    `;
+            lucide.createIcons();
+            return;
+          }
+
+          if (data.sessions.length === 0) {
+            container.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i data-lucide="message-circle" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                            <p class="text-gray-500 text-lg">لا توجد جلسات نشطة</p>
+                            <p class="text-gray-400 text-sm">قم بإنشاء جلسة جديدة لبدء الاستخدام</p>
+                        </div>
+                    `;
+            lucide.createIcons();
+            return;
+          }
+
+          data.sessions.forEach((session) => {
+            try {
+              const sessionCard = createSessionCard(session);
+              container.appendChild(sessionCard);
+            } catch (error) {
+              console.error("Error creating session card:", error, session);
+            }
+          });
+
+          // Re-create icons for new elements
+          lucide.createIcons();
+        } catch (error) {
+          console.error("Error loading sessions:", error);
+          const container = document.getElementById("sessions-container");
+          if (container) {
+            container.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i data-lucide="alert-circle" class="w-16 h-16 text-red-300 mx-auto mb-4"></i>
+                            <p class="text-red-500 text-lg">خطأ في تحميل الجلسات</p>
+                            <p class="text-gray-400 text-sm">${error.message || 'حدث خطأ غير متوقع'}</p>
+                            <button onclick="loadSessions()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                                إعادة المحاولة
+                            </button>
+                        </div>
+                    `;
+            lucide.createIcons();
+          }
+          // لا نعرض notification هنا لتجنب التكرار
+        }
+      }
+
+      function createSessionCard(session) {
+        if (!session || !session.id) {
+          console.error("Invalid session data:", session);
+          return null;
+        }
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-lg shadow-md p-6 fade-in";
+
+        const statusClass = getStatusClass(session.status || "closed");
+        const statusText = getStatusText(session.status || "closed");
+        
+        let lastMessageTime = "لا توجد رسائل";
+        if (session.lastMessageAt) {
+          try {
+            const date = new Date(session.lastMessageAt);
+            if (!isNaN(date.getTime())) {
+              lastMessageTime = date.toLocaleString("ar-EG");
+            }
+          } catch (e) {
+            console.warn("Invalid date:", session.lastMessageAt);
+          }
+        }
+
+        // Escape session.id لتجنب XSS
+        const safeSessionId = String(session.id).replace(/['"<>]/g, '');
+
+        card.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">${safeSessionId}</h3>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium text-white ${statusClass}">
+                        ${statusText}
+                    </span>
+                </div>
+
+                <div class="space-y-2 mb-4">
+                    <p class="text-sm text-gray-600">
+                        <i data-lucide="clock" class="inline w-4 h-4 mr-1"></i>
+                        آخر رسالة: ${lastMessageTime}
+                    </p>
+                </div>
+
+                <div class="flex space-x-2 space-x-reverse">
+                    ${
+                      session.status === "open"
+                        ? `
+                        <button onclick="showSendModal('${safeSessionId}')" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <i data-lucide="send" class="inline w-4 h-4 mr-1"></i>
+                            إرسال رسالة
+                        </button>
+                        <button onclick="showBulkModal('${safeSessionId}')" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <i data-lucide="users" class="inline w-4 h-4 mr-1"></i>
+                            إرسال جماعي
+                        </button>
+                        <button onclick="deleteSession('${safeSessionId}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <i data-lucide="trash-2" class="inline w-4 h-4 mr-1"></i>
+                            حذف
+                        </button>
+                    `
+                        : `
+                        <button onclick="showQR('${safeSessionId}')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <i data-lucide="qr-code" class="inline w-4 h-4 mr-1"></i>
+                            عرض QR
+                        </button>
+                        <button onclick="deleteSession('${safeSessionId}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium transition duration-200">
+                            <i data-lucide="trash-2" class="inline w-4 h-4 mr-1"></i>
+                            حذف
+                        </button>
+                    `
+                    }
+                </div>
+            `;
+
+        return card;
+      }
+
+      function getStatusClass(status) {
+        switch (status) {
+          case "open":
+            return "status-connected";
+          case "connecting":
+            return "status-connecting";
+          case "closed":
+            return "status-closed";
+          default:
+            return "bg-gray-500";
+        }
+      }
+
+      function getStatusText(status) {
+        switch (status) {
+          case "open":
+            return "متصل";
+          case "connecting":
+            return "جاري الاتصال";
+          case "closed":
+            return "غير متصل";
+          default:
+            return status;
+        }
+      }
+
+      async function showQR(sessionId) {
+        try {
+          const response = await fetch(`/dashboard/${sessionId}/qr`);
+          const data = await response.json();
+
+          if (data.qr) {
+            // Create QR modal
+            const modal = document.createElement("div");
+            modal.className =
+              "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+            modal.innerHTML = `
+                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 mx-4">
+                            <h3 class="text-lg font-semibold mb-4 text-center">امسح الرمز للربط</h3>
+                            <div class="qr-container mb-4">
+                                <img src="${data.qr}" alt="QR Code" class="w-full rounded-lg">
+                            </div>
+                            <p class="text-sm text-gray-600 text-center mb-4">
+                                افتح WhatsApp على هاتفك وامسح هذا الرمز
+                            </p>
+                            <div class="flex justify-center">
+                                <button onclick="this.closest('.fixed').remove()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+                                    إغلاق
+                                </button>
+                            </div>
+                        </div>
+                    `;
+            document.body.appendChild(modal);
+          } else {
+            showNotification("الـ QR غير متاح بعد، جرب مرة أخرى", "warning");
+          }
+        } catch (error) {
+          console.error("Error loading QR:", error);
+          showNotification("خطأ في تحميل الـ QR", "error");
+        }
+      }
+
+      function showCreateModal() {
+        document
+          .getElementById("create-session-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeModal() {
+        document.getElementById("create-session-modal").classList.add("hidden");
+        document.getElementById("create-session-form").reset();
+      }
+
+      function showSendModal(sessionId) {
+        document.getElementById("send-session-id").value = sessionId;
+        document
+          .getElementById("send-message-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeSendModal() {
+        document.getElementById("send-message-modal").classList.add("hidden");
+        document.getElementById("send-message-form").reset();
+      }
+
+      function showBulkModal(sessionId) {
+        document.getElementById("bulk-session-id").value = sessionId;
+        document.getElementById("bulk-results").classList.add("hidden");
+        document.getElementById("bulk-results-content").innerHTML = "";
+        document
+          .getElementById("bulk-send-modal")
+          .classList.remove("hidden");
+      }
+
+      function closeBulkModal() {
+        document.getElementById("bulk-send-modal").classList.add("hidden");
+        document.getElementById("bulk-send-form").reset();
+        document.getElementById("bulk-results").classList.add("hidden");
+        document.getElementById("bulk-results-content").innerHTML = "";
+      }
+
+      document
+        .getElementById("create-session-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const sessionId = document
+            .getElementById("new-session-id")
+            .value.trim();
+          const webhookUrl = document
+            .getElementById("webhook-url")
+            .value.trim();
+          const webhookSecret = document.getElementById("webhook-secret").value.trim();
+
+          // بناء body - webhookUrl اختياري
+          const requestBody = {
+            mode: "qr",
+            reset: true,
+          };
+
+          // إضافة webhookUrl فقط إذا كان موجوداً
+          if (webhookUrl) {
+            requestBody.webhookUrl = webhookUrl;
+          }
+
+          // إضافة webhookSecret فقط إذا كان موجوداً
+          if (webhookSecret) {
+            requestBody.webhookSecret = webhookSecret;
+          }
+
+          try {
+            const response = await fetch(`/sessions/${sessionId}/connect`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestBody),
+            });
+
+            if (response.ok) {
+              showNotification("تم إنشاء الجلسة بنجاح", "success");
+              closeModal();
+              loadSessions();
+            } else {
+              const error = await response.json();
+              showNotification(`خطأ: ${error.error}`, "error");
+            }
+          } catch (error) {
+            console.error("Error creating session:", error);
+            showNotification("خطأ في إنشاء الجلسة", "error");
+          }
+        });
+
+      document
+        .getElementById("send-message-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const sessionId = document.getElementById("send-session-id").value;
+          const phone = document.getElementById("recipient-phone").value.trim();
+          const message = document.getElementById("message-text").value.trim();
+
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 ثانية timeout
+            
+            const response = await fetch(`/sessions/${sessionId}/send`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                to: phone,
+                message: message,
+              }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              showNotification("تم إرسال الرسالة بنجاح", "success");
+              closeSendModal();
+            } else {
+              const error = await response.json();
+              const errorMessage = error.message || error.error || 'خطأ غير معروف';
+              showNotification(`خطأ: ${errorMessage}`, "error");
+            }
+          } catch (error) {
+            console.error("Error sending message:", error);
+            if (error.name === 'AbortError') {
+              showNotification("خطأ: انتهت مهلة الإرسال. تأكد من صحة الرقم وحاول مرة أخرى", "error");
+            } else {
+              showNotification("خطأ في إرسال الرسالة: " + (error.message || 'خطأ غير معروف'), "error");
+            }
+          }
+        });
+
+      document
+        .getElementById("bulk-send-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const sessionId = document.getElementById("bulk-session-id").value;
+          const recipientsText = document.getElementById("bulk-recipients").value.trim();
+          const message = document.getElementById("bulk-message-text").value.trim();
+          const delay = parseInt(document.getElementById("bulk-delay").value) || 1000;
+
+          if (!recipientsText || !message) {
+            showNotification("يرجى إدخال الأرقام والرسالة", "error");
+            return;
+          }
+
+          // تحويل النص إلى مصفوفة من الأرقام
+          const recipients = recipientsText
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+          if (recipients.length === 0) {
+            showNotification("يرجى إدخال رقم واحد على الأقل", "error");
+            return;
+          }
+
+          // تعطيل الزر أثناء الإرسال
+          const submitBtn = document.getElementById("bulk-send-btn");
+          submitBtn.disabled = true;
+          submitBtn.textContent = "جاري الإرسال...";
+
+          try {
+            const response = await fetch(`/sessions/${sessionId}/send-bulk`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                recipients: recipients,
+                message: message,
+                delay: delay
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              
+              // عرض النتائج
+              const resultsDiv = document.getElementById("bulk-results");
+              const resultsContent = document.getElementById("bulk-results-content");
+              
+              let html = `
+                <div class="mb-2 p-2 bg-gray-100 rounded">
+                  <strong>الإجمالي:</strong> ${data.total} | 
+                  <span class="text-green-600"><strong>نجح:</strong> ${data.success}</span> | 
+                  <span class="text-red-600"><strong>فشل:</strong> ${data.failed}</span>
+                </div>
+              `;
+
+              if (data.results && data.results.length > 0) {
+                html += '<div class="space-y-1">';
+                data.results.forEach((result, index) => {
+                  const recipient = typeof result.recipient === 'string' 
+                    ? result.recipient 
+                    : result.recipient.phone || result.recipient.to || 'غير معروف';
+                  
+                  if (result.success) {
+                    html += `<div class="p-2 bg-green-50 rounded text-green-700">
+                      ✓ ${recipient}: تم الإرسال بنجاح
+                    </div>`;
+                  } else {
+                    html += `<div class="p-2 bg-red-50 rounded text-red-700">
+                      ✗ ${recipient}: ${result.error || 'فشل الإرسال'}
+                    </div>`;
+                  }
+                });
+                html += '</div>';
+              }
+
+              resultsContent.innerHTML = html;
+              resultsDiv.classList.remove("hidden");
+
+              showNotification(
+                `تم إرسال ${data.success} من ${data.total} رسالة بنجاح`, 
+                data.failed > 0 ? "warning" : "success"
+              );
+            } else {
+              const error = await response.json();
+              const errorMessage = error.message || error.error || 'خطأ غير معروف';
+              showNotification(`خطأ: ${errorMessage}`, "error");
+            }
+          } catch (error) {
+            console.error("Error sending bulk messages:", error);
+            showNotification("خطأ في إرسال الرسائل: " + (error.message || 'خطأ غير معروف'), "error");
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "إرسال";
+          }
+        });
+
+      async function deleteSession(sessionId) {
+        if (!confirm(`هل أنت متأكد من حذف الجلسة "${sessionId}"؟`)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/sessions/${sessionId}`, {
+            method: "DELETE",
+          });
+
+          if (response.ok) {
+            showNotification("تم حذف الجلسة بنجاح", "success");
+            loadSessions();
+          } else {
+            const error = await response.json();
+            showNotification(`خطأ: ${error.error}`, "error");
+          }
+        } catch (error) {
+          console.error("Error deleting session:", error);
+          showNotification("خطأ في حذف الجلسة", "error");
+        }
+      }
+
+      function showNotification(message, type = "info") {
+        const colors = {
+          success: "bg-green-500",
+          error: "bg-red-500",
+          warning: "bg-yellow-500",
+          info: "bg-blue-500",
+        };
+
+        const notification = document.createElement("div");
+        notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-4 py-2 rounded-md shadow-lg z-50 fade-in`;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+
+      // Cleanup interval on page unload
+      window.addEventListener("beforeunload", function () {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+      });
+    </script>
+  </body>
+</html>
