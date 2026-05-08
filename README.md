@@ -1,283 +1,209 @@
-# WhatsApp Bridge - جسر WhatsApp للتطبيقات
+# WhatsApp Bridge
 
-خدمة HTTP بسيطة وقوية تربط بين تطبيقك (Laravel أو أي تطبيق آخر) و WhatsApp باستخدام مكتبة Baileys. تتيح لك إرسال واستقبال الرسائل، إدارة جلسات متعددة، وإرسال أنواع مختلفة من المحتوى.
-
----
-
-## 🚀 الميزات
-
-- ✅ **إرسال رسائل نصية** - أرسل رسائل للعملاء بسهولة
-- ✅ **إرسال الصور** - أرسل صور مع نصوص توضيحية
-- ✅ **استقبال الرسائل** - استقبل ردود العملاء عبر webhooks
-- ✅ **رسائل جماعية** - أرسل لعدة عملاء بنقرة واحدة
-- ✅ **استطلاعات رأي** - أنشئ استطلاعات تفاعلية
-- ✅ **أزرار تفاعلية** - أرسل رسائل بأزرار للتفاعل السريع
-- ✅ **إدارة جلسات متعددة** - حسابات WhatsApp مختلفة لأغراض مختلفة
-- ✅ **Dashboard ويب** - واجهة سهلة لإدارة الجلسات والرسائل
-- ✅ **Docker Support** - نشر سهل وسريع
-- ✅ **Laravel Integration** - تكامل كامل مع Laravel
-- ✅ **API Authentication** - حماية API بمفاتيح
-- ✅ **Rate Limiting** - حماية من الإفراط في الاستخدام
+A lightweight HTTP service that connects your application to WhatsApp using the [Baileys](https://github.com/WhiskeySockets/Baileys) library. Send and receive messages, manage multiple sessions, and integrate with any backend via webhooks.
 
 ---
 
-## 📋 متطلبات النظام
+## Features
 
-- Node.js 18 أو أحدث
-- npm أو yarn
-- حساب WhatsApp (Business أو شخصي)
-- Docker & Docker Compose (اختياري)
+- **Text messages** — send plain text to any WhatsApp number
+- **Image messages** — send images from a URL or base64 with an optional caption
+- **Bulk messaging** — send to multiple recipients with configurable delay
+- **Polls** — create interactive polls
+- **Interactive buttons** — send messages with quick-reply buttons
+- **Inbound webhooks** — receive messages, poll votes, button replies, and status updates
+- **Multiple sessions** — run several WhatsApp accounts simultaneously
+- **Web dashboard** — browser UI to manage sessions and send messages
+- **MySQL persistence** — store messages, sessions, and events in a database
+- **Docker support** — single `docker-compose up` to get started
+- **Rate limiting** — built-in protection against abuse
+- **API key auth** — optional key-based authentication
 
 ---
 
-## ⚡ التثبيت السريع
+## Requirements
 
-### الطريقة 1: بدون Docker (الأسهل للبدء)
+- Node.js 18+
+- npm
+- A WhatsApp account (personal or Business)
+- MySQL 8+ *(optional — only needed if `DB_ENABLED=true`)*
+- Docker & Docker Compose *(optional)*
+
+---
+
+## Quick Start
+
+### Without Docker
 
 ```bash
-# استنساخ المشروع
 git clone https://github.com/your-repo/whatsapp-bridge.git
 cd whatsapp-bridge
 
-# تثبيت المتطلبات
 npm install
-
-# إنشاء ملف البيئة
 cp env.example .env
 
-# تشغيل الخدمة (مع إعداد قاعدة البيانات تلقائياً)
+# Start with automatic database setup
 npm run start:db
 ```
 
-**أو للتطوير (مع auto-reload):**
-```bash
-npm run dev
-```
+Then open `http://localhost:3000/dashboard`.
 
-**أو بدون قاعدة بيانات:**
-```bash
-npm start
-```
-
-### الطريقة 2: باستخدام Docker
+### With Docker
 
 ```bash
-# استنساخ المشروع
-git clone https://github.com/your-repo/whatsapp-bridge.git
-cd whatsapp-bridge
-
-# تشغيل بـ Docker
 docker-compose up -d
-
-# الوصول للـ dashboard
-open http://localhost:3000
 ```
 
 ---
 
-## 🔧 الإعداد
+## Available Commands
 
-### ملف البيئة (.env)
+| Command | Description |
+|---------|-------------|
+| `npm run start:db` | Start the server + auto-create and migrate the database |
+| `npm start` | Start the server without database setup |
+| `npm run dev` | Start with file watching (auto-restart on changes) |
+| `npm test` | Run API tests |
+| `npm run db:setup` | Create database tables |
+| `npm run db:fresh` | Drop and recreate all tables |
+| `npm run db:status` | Check database connection and table status |
+| `npm run docker:build` | Build the Docker image |
+
+---
+
+## Configuration
+
+Copy `env.example` to `.env` and adjust as needed:
 
 ```env
-# Server Configuration
+# Server
 PORT=3000
 LOG_LEVEL=info
 
-# Security - API Authentication (اختياري للـ development)
+# API Authentication (leave empty to disable — development only)
 API_KEY=
 
-# Session Configuration
+# Session files location
 SESSION_DIR=data/sessions
 
-# CORS Settings
-CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+# CORS (comma-separated origins)
+CORS_ORIGIN=http://localhost:3000
 
-# Bulk Messaging Settings
+# Bulk messaging
 MAX_BULK_SIZE=100
+
+# Database (set DB_ENABLED=true to activate)
+DB_ENABLED=false
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=whatsapp_bridge
 ```
 
-**ملاحظة:** للـ development، يمكنك ترك `API_KEY` فارغاً. للـ production، حدد مفتاح قوي.
+> **Note:** `data/sessions` stores WhatsApp authentication credentials. Do not delete this folder while sessions are active.
 
 ---
 
-## 📱 استخدام Dashboard
+## Dashboard
 
-1. افتح `http://localhost:3000/dashboard` في المتصفح
-2. اضغط "إنشاء جلسة جديدة"
-3. أدخل:
-   - **معرف الجلسة:** `main` (أو أي اسم تريده)
-   - **عنوان URL للـ Webhook:** `http://localhost:8000/api/webhooks/whatsapp` (إذا كان لديك Laravel)
-   - **سر الـ Webhook:** (اختياري - مفتاح سري للأمان)
-4. اضغط "إنشاء" - ستظهر شاشة QR Code
-5. افتح WhatsApp على هاتفك
-6. اذهب إلى: **الإعدادات > الأجهزة المرتبطة > ربط جهاز**
-7. امسح QR Code
-8. انتظر حتى تصبح الحالة "متصل"
+Open `http://localhost:3000/dashboard` in your browser.
 
----
-
-## 🔗 التكامل مع Laravel
-
-### 1. إعداد متغيرات البيئة
-
-في ملف `.env` الخاص بـ Laravel:
-
-```env
-WHATSAPP_BRIDGE_URL=http://localhost:3000
-WHATSAPP_WEBHOOK_SECRET=your-secret-key-here
-WHATSAPP_DEFAULT_SESSION=main
-WHATSAPP_API_KEY=  # إذا كان Bridge محمي بـ API Key
-```
-
-### 2. استخدام WhatsAppService
-
-الخدمة موجودة في `whatsapp-laravel-demo/app/Services/WhatsAppService.php`
-
-**مثال بسيط:**
-
-```php
-use App\Services\WhatsAppService;
-
-$whatsapp = app(WhatsAppService::class);
-
-// إرسال رسالة نصية
-$result = $whatsapp->sendMessage('main', '201234567890', 'مرحباً من Laravel!');
-
-// إرسال صورة
-$result = $whatsapp->sendImage(
-    sessionId: 'main',
-    phoneNumber: '201234567890',
-    imageUrl: 'https://example.com/image.jpg',
-    caption: 'هذه صورة تجريبية'
-);
-```
-
-### 3. إعداد Webhook Controller
-
-الـ Controller موجود في `whatsapp-laravel-demo/app/Http/Controllers/WhatsAppWebhookController.php`
-
-**في `routes/api.php`:**
-
-```php
-Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle']);
-```
+**Creating a session:**
+1. Click **New Session**
+2. Enter a session ID (e.g. `main`, `sales`, `support`)
+3. Optionally add a webhook URL and secret
+4. Click **Create** — a QR code will appear
+5. On your phone: **WhatsApp → Settings → Linked Devices → Link a Device**
+6. Scan the QR code
+7. The session status will change to **Connected**
 
 ---
 
-## 📤 إرسال الرسائل
+## API Reference
 
-### رسالة نصية بسيطة
+All endpoints are prefixed with the server base URL (default `http://localhost:3000`).
 
-```php
-$whatsapp = app(WhatsAppService::class);
-$result = $whatsapp->sendMessage('main', '201234567890', 'مرحباً بك!');
-```
+### Sessions
 
-### إرسال صورة
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/sessions` | List all sessions |
+| `GET` | `/sessions/:id` | Get a single session |
+| `POST` | `/sessions/:id/connect` | Create or reconnect a session |
+| `GET` | `/sessions/:id/qr` | Get the current QR code |
+| `DELETE` | `/sessions/:id` | Delete a session |
 
-**من رابط URL:**
-```php
-$result = $whatsapp->sendImage(
-    sessionId: 'main',
-    phoneNumber: '201234567890',
-    imageUrl: 'https://example.com/image.jpg',
-    caption: 'صورة المنتج'
-);
-```
+### Messaging
 
-**من ملف محلي:**
-```php
-$result = $whatsapp->sendImage(
-    sessionId: 'main',
-    phoneNumber: '201234567890',
-    imagePath: storage_path('app/images/product.jpg'),
-    caption: 'صورة المنتج'
-);
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/sessions/:id/send` | Send a text message |
+| `POST` | `/sessions/:id/send-image` | Send an image |
+| `POST` | `/sessions/:id/send-poll` | Send a poll |
+| `POST` | `/sessions/:id/send-buttons` | Send a message with buttons |
+| `POST` | `/sessions/:id/send-bulk` | Send to multiple recipients |
 
-### استطلاع رأي
+### Other
 
-```php
-$result = $whatsapp->sendPoll(
-    'main',
-    '201234567890',
-    'ما رأيك في خدماتنا؟',
-    ['ممتاز', 'جيد', 'يحتاج تحسين']
-);
-```
-
-### رسائل جماعية
-
-```php
-$customers = [
-    ['phone' => '201234567890', 'name' => 'أحمد'],
-    ['phone' => '201234567891', 'name' => 'فاطمة']
-];
-
-$message = "مرحباً {name}، عروضنا الجديدة متاحة الآن!";
-
-$result = $whatsapp->sendBulkMessages('main', $customers, $message);
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/dashboard` | Web dashboard |
 
 ---
 
-## 📡 API Endpoints
+## Request Examples
 
-### Bridge API
+**Create a session:**
+```bash
+curl -X POST http://localhost:3000/sessions/main/connect \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "qr", "webhookUrl": "https://your-app.com/webhook"}'
+```
 
-| Method | Endpoint | الوصف |
-|--------|----------|-------|
-| GET | `/health` | التحقق من حالة Bridge |
-| GET | `/sessions` | قائمة الجلسات |
-| GET | `/sessions/:id` | معلومات جلسة محددة |
-| POST | `/sessions/:id/connect` | إنشاء/إعادة الاتصال بجلسة |
-| GET | `/sessions/:id/qr` | الحصول على QR Code |
-| POST | `/sessions/:id/send` | إرسال رسالة نصية |
-| POST | `/sessions/:id/send-image` | إرسال صورة |
-| POST | `/sessions/:id/send-poll` | إرسال استطلاع رأي |
-| POST | `/sessions/:id/send-buttons` | إرسال رسالة بأزرار |
-| POST | `/sessions/:id/send-bulk` | إرسال رسائل جماعية |
-| DELETE | `/sessions/:id` | حذف جلسة |
-
-### أمثلة API
-
-**إرسال رسالة:**
+**Send a text message:**
 ```bash
 curl -X POST http://localhost:3000/sessions/main/send \
   -H "Content-Type: application/json" \
-  -d '{
-    "to": "201234567890",
-    "message": "مرحباً!"
-  }'
+  -d '{"to": "201234567890", "message": "Hello from WhatsApp Bridge!"}'
 ```
 
-**إرسال صورة:**
+**Send an image:**
 ```bash
 curl -X POST http://localhost:3000/sessions/main/send-image \
   -H "Content-Type: application/json" \
-  -d '{
-    "to": "201234567890",
-    "imageUrl": "https://example.com/image.jpg",
-    "caption": "صورة تجريبية"
-  }'
+  -d '{"to": "201234567890", "imageUrl": "https://example.com/photo.jpg", "caption": "Check this out"}'
 ```
+
+**Send bulk messages:**
+```bash
+curl -X POST http://localhost:3000/sessions/main/send-bulk \
+  -H "Content-Type: application/json" \
+  -d '{"recipients": ["201234567890", "201098765432"], "message": "Hello!", "delay": 1000}'
+```
+
+**Phone number format:** use international format without `+` — e.g. `201234567890`. Egyptian local format (`01012345678`) is also accepted and normalized automatically.
 
 ---
 
-## 📥 استقبال الرسائل (Webhooks)
+## Webhooks
 
-### أنواع الأحداث
+When a session has a `webhookUrl` configured, the bridge will POST events to that URL.
 
-- `connection_update` - تغيير حالة الاتصال
-- `message` - رسالة واردة
-- `button_reply` - رد على زر
-- `list_reply` - رد على قائمة
-- `poll` - إنشاء استطلاع
-- `poll_vote` - تصويت في استطلاع
-- `message_update` - تحديث حالة الرسالة
+### Event Types
 
-### مثال Webhook Payload
+| Type | Trigger |
+|------|---------|
+| `connection_update` | Session connects, disconnects, or QR refreshes |
+| `message` | Inbound text message |
+| `button_reply` | User tapped a button |
+| `list_reply` | User selected a list item |
+| `poll` | A poll was created |
+| `poll_vote` | A user voted in a poll |
+| `message_update` | Message delivery status changed |
+
+### Example Payload
 
 ```json
 {
@@ -286,227 +212,144 @@ curl -X POST http://localhost:3000/sessions/main/send-image \
   "eventId": "abc123",
   "messageId": "XYZ789",
   "from": "201234567890@s.whatsapp.net",
-  "sender": "201234567890@s.whatsapp.net",
-  "text": "مرحباً",
+  "text": "Hello",
   "messageType": "conversation",
-  "timestamp": 1234567890
+  "timestamp": 1700000000
 }
 ```
 
+### Webhook Security
+
+Set a `webhookSecret` when creating a session. The bridge will include it in every request as the `x-webhook-secret` header. Verify it on your server to reject forged requests.
+
 ---
 
-## 🎯 أمثلة الاستخدام
+## Laravel Integration
 
-### إرسال تأكيد طلب
+See [`examples/laravel/`](examples/laravel/) for ready-to-use files:
+
+- `WhatsAppService.php` — service class for sending messages
+- `WhatsAppWebhookController.php` — controller for receiving events
+- `CustomerController.php` — example usage in a controller
+- `config.php` — configuration file
+- `routes.php` — route definitions
+
+**Quick example:**
 
 ```php
-public function confirmOrder(Order $order)
-{
-    $message = "تم تأكيد طلبك #{$order->id}\n" .
-               "المبلغ: {$order->total} جنيه\n" .
-               "تاريخ التسليم: {$order->delivery_date->format('d/m/Y')}";
+use App\Services\WhatsAppService;
 
-    $whatsapp = app(WhatsAppService::class);
-    return $whatsapp->sendMessage('main', $order->customer->phone, $message);
-}
+$wa = app(WhatsAppService::class);
+
+// Send text
+$wa->sendMessage('main', '201234567890', 'Your order has been confirmed!');
+
+// Send image
+$wa->sendImage('main', '201234567890', 'https://example.com/receipt.jpg', 'Your receipt');
+
+// Send poll
+$wa->sendPoll('main', '201234567890', 'Rate our service', ['Excellent', 'Good', 'Needs improvement']);
 ```
 
-### إرسال صورة منتج
+Add to your Laravel `.env`:
 
-```php
-public function sendProductImage($customerPhone, Product $product)
-{
-    $whatsapp = app(WhatsAppService::class);
-    
-    return $whatsapp->sendImage(
-        sessionId: 'main',
-        phoneNumber: $customerPhone,
-        imageUrl: $product->image_url,
-        caption: "منتج جديد: {$product->name}\nالسعر: {$product->price} جنيه"
-    );
-}
-```
-
-### الردود التلقائية
-
-```php
-// في WhatsAppWebhookController
-private function handleIncomingMessage(array $payload): void
-{
-    $phone = $this->extractPhoneFromJid($payload['from']);
-    $message = $payload['text'] ?? '';
-    
-    $replies = [
-        'مرحبا' => 'مرحباً بك! كيف يمكننا مساعدتك؟',
-        'شكرا' => 'العفو! نتطلع لمساعدتك مرة أخرى.',
-    ];
-    
-    if (isset($replies[strtolower($message)])) {
-        $whatsapp = app(WhatsAppService::class);
-        $whatsapp->sendMessage('main', $phone, $replies[$message]);
-    }
-}
-```
-
----
-
-## 🔒 الأمان
-
-### 1. API Key Authentication
-
-في Bridge `.env`:
 ```env
-API_KEY=your-secure-api-key-here
-```
-
-في Laravel `.env`:
-```env
-WHATSAPP_API_KEY=your-secure-api-key-here
-```
-
-### 2. Webhook Secret Validation
-
-تأكد من أن Webhook Secret متطابق في Bridge و Laravel:
-
-**في Bridge (عند إنشاء الجلسة):**
-```json
-{
-  "webhookUrl": "http://localhost:8000/api/webhooks/whatsapp",
-  "webhookSecret": "your-secret-key-here"
-}
-```
-
-**في Laravel `.env`:**
-```env
-WHATSAPP_WEBHOOK_SECRET=your-secret-key-here
-```
-
-### 3. HTTPS في الإنتاج
-
-استخدم HTTPS في الإنتاج:
-```env
-WHATSAPP_BRIDGE_URL=https://your-bridge-domain.com
+WHATSAPP_BRIDGE_URL=http://localhost:3000
+WHATSAPP_DEFAULT_SESSION=main
+WHATSAPP_WEBHOOK_SECRET=your-secret
+WHATSAPP_API_KEY=   # only if API_KEY is set in the bridge
 ```
 
 ---
 
-## 🐛 حل المشاكل
+## Security
 
-### المشكلة: "Session is not connected"
+**API key** — set `API_KEY` in `.env`. All requests to `/sessions/*` must include the key:
+```
+X-API-Key: your-key
+# or
+Authorization: Bearer your-key
+```
 
-**الحل:**
-1. افتح Dashboard: `http://localhost:3000/dashboard`
-2. تحقق من حالة الجلسة
-3. إذا كانت "closed" أو "connecting":
-   - احذف الجلسة
-   - أنشئ جلسة جديدة
-   - امسح QR Code مرة أخرى
+**Webhook secret** — set `webhookSecret` when creating a session. Validate the `x-webhook-secret` header on your server.
 
-### المشكلة: "QR Code لا يظهر"
-
-**الحل:**
-1. تأكد من أن الجلسة موجودة
-2. إذا كانت الحالة "connecting"، انتظر قليلاً
-3. جرب إعادة إنشاء الجلسة
-
-### المشكلة: "Unauthorized" (401)
-
-**الحل:**
-- إذا كان `API_KEY` محدد في Bridge، يجب إضافته في Laravel `.env`
-- أو اترك `API_KEY` فارغاً في Bridge للـ development
-
-### المشكلة: "Recipient is invalid"
-
-**الحل:**
-- استخدم التنسيق الدولي بدون `+`: `201234567890`
-- تأكد أن الرقم مسجل في WhatsApp
+**Production checklist:**
+- Set a strong `API_KEY`
+- Use HTTPS for both the bridge and your webhook endpoint
+- Set `CORS_ORIGIN` to your actual frontend domain
+- Do not expose the bridge port publicly without a reverse proxy
 
 ---
 
-## 📊 المراقبة
+## Troubleshooting
 
-### فحص الحالة
+**"Session is not connected"**
+- Open the dashboard and check the session status
+- If it shows `closed`, delete the session and create a new one, then scan the QR again
 
-```bash
-curl http://localhost:3000/health
-```
+**"QR code not available"**
+- The session may still be initializing — wait a few seconds and try again
+- If it persists, delete and recreate the session
 
-**النتيجة:**
-```json
-{"status":"ok","uptime":123.45}
-```
+**"Unauthorized" (401)**
+- You have `API_KEY` set in `.env` — include it in your request headers
 
-### عرض الجلسات
+**"Recipient is invalid"**
+- Use international format without `+`: `201234567890`
+- Make sure the number is registered on WhatsApp
 
-```bash
-curl http://localhost:3000/sessions
-```
-
-### عرض سجلات Docker
-
-```bash
-docker-compose logs -f whatsapp-bridge
-```
+**Messages time out**
+- Single message timeout: 30 seconds
+- Bulk message timeout: 60 seconds
+- Check that the session is connected and the number is valid
 
 ---
 
-## 📚 الوثائق الإضافية
+## Project Structure
 
-- [دليل التشغيل السريع](QUICK_START.md) - خطوات البدء السريع
-- [دليل التكامل مع Laravel](LARAVEL_INTEGRATION_GUIDE.md) - تفاصيل التكامل
-- [أمثلة OTP والإشعارات](examples/OTP_AND_NOTIFICATIONS.md) - أمثلة عملية
-
----
-
-## 🛠️ التطوير
-
-### تشغيل في وضع Development
-
-```bash
-npm run dev
 ```
-
-### اختبار API
-
-```bash
-npm test
-```
-
-### بناء Docker Image
-
-```bash
-npm run docker:build
+whatsapp-bridge/
+├── src/
+│   ├── index.js              # Main application entry point
+│   ├── database.js           # MySQL connection and queries
+│   └── database-integration.js
+├── scripts/
+│   ├── start-with-db.js      # Smart startup script
+│   ├── setup-database.js     # Create database tables
+│   ├── migrate-fresh.js      # Drop and recreate tables
+│   ├── db-status.js          # Check database status
+│   └── test-api.js           # API test runner
+├── public/
+│   ├── index.html            # Dashboard HTML
+│   ├── css/dashboard.css     # Dashboard styles
+│   └── js/
+│       ├── dashboard.js      # Dashboard logic
+│       └── modals.js         # Modal components
+├── database/
+│   └── schema.sql            # Database schema
+├── examples/
+│   └── laravel/              # Laravel integration files
+├── data/
+│   └── sessions/             # WhatsApp auth files (auto-created)
+├── docker-compose.yml
+├── Dockerfile
+└── .env
 ```
 
 ---
 
-## 📝 الترخيص
+## License
 
-هذا المشروع مفتوح المصدر تحت رخصة MIT.
-
----
-
-## 🤝 المساهمة
-
-نرحب بالمساهمات! يرجى:
-1. إنشاء Issue لمناقشة التغييرات
-2. عمل Fork للمشروع
-3. إنشاء Pull Request
+MIT
 
 ---
 
-## 📞 الدعم
+## Contributing
 
-- إنشاء Issue على GitHub
-- مراجعة الوثائق
-- فحص الأمثلة في مجلد `examples/`
-
----
-
-## 🎉 شكراً لاستخدام WhatsApp Bridge!
-
-إذا أعجبك المشروع، لا تنسى ⭐ Star على GitHub!
+1. Open an issue to discuss the change
+2. Fork the repository
+3. Submit a pull request
 
 ---
 
-**آخر تحديث:** 2026-01-26
+*Built with [Baileys](https://github.com/WhiskeySockets/Baileys) and [Express](https://expressjs.com/).*
